@@ -27,7 +27,7 @@ This project uses **RAG (Retrieval-Augmented Generation)** to index your PDF con
 
 ---
 
-📂 Project Structure
+## 📂 Project Structure
 ├── app.py                  # Main application code
 ├── requirements.txt        # List of Python dependencies
 ├── .env                    # API Key (Do NOT upload to GitHub)
