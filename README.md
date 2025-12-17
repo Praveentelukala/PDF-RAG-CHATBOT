@@ -28,12 +28,12 @@ This project uses **RAG (Retrieval-Augmented Generation)** to index your PDF con
 ---
 
 ## 📂 Project Structure
-* ├── app.py                  # Main application code
-* ├── requirements.txt        # List of Python dependencies
-* ├── .env                    # API Key (Do NOT upload to GitHub)
-* ├── .gitignore              # Files to exclude from Git
-* ├── faiss_index/            # Local vector storage (generated at runtime)
-* └── README.md               # Project documentation
+* ├── **app.py**                  # Main application code
+* ├── **requirements.txt**        # List of Python dependencies
+* ├── **.env**                    # API Key (Do NOT upload to GitHub)
+* ├── **.gitignore**             # Files to exclude from Git
+* ├── **faiss_index/**            # Local vector storage (generated at runtime)
+* └── **README.md**               # Project documentation
 
 
 
