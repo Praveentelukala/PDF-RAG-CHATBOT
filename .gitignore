@@ -1,0 +1,18 @@
+# 1. Security (CRITICAL)
+.env
+api_key.txt
+secrets.toml
+
+# 2. Python System Files
+__pycache__/
+*.pyc
+.DS_Store
+
+# 3. Virtual Environment (Too big to upload)
+.venv/
+venv/
+env/
+
+# 4. RAG Specific Data (Generated automatically)
+faiss_index/
+chroma_db/

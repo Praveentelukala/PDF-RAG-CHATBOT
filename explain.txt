@@ -1,0 +1,496 @@
+Streamlit is an open-source Python library for building interactive web apps using only Python. It's ideal for creating dashboards, data-driven web apps, reporting tools and interactive user interfaces without needing HTML, CSS or JavaScript.
+
+Here in the code , I used streamlit .
+
+----------------------------------------------------------------
+
+Imports the PdfReader tool from the PyPDF2 library.
+
+Python cannot read PDF files by default. This tool lets us open a PDF and extract the text written inside it.
+
+
+-----------------------------------------------------------------
+
+Imports a specific tool to cut text into smaller pieces.
+
+Why:
+     AI models have a limit on how much text they can read at once. We cannot feed an entire book; we must split it into small "chunks."
+
+-----------------------------------------------------------------
+
+Imports tools to talk to your computer's operating system (os) and load hidden settings (dotenv).
+
+Why:
+      We keep sensitive passwords (like your Google API Key) in a hidden file called .env. These tools let the code read that file safely.
+
+-----------------------------------------------------------------
+----------------------------------------------------------------
+----------------------------------------------------------------
+
+Imports the connection tools for Google's AI.
+
+Why:
+     This connects our code to Google's servers so we can send questions and get answers from the Gemini AI.
+
+-----------------------------------------------------------------
+
+Imports the tool that turns text into numbers (vectors).
+
+Why: 
+       Computers don't understand words; they understand numbers. This tool converts "Hello" into a list of numbers like [0.1, 0.5, ...] so we can compare them mathematically. We use HuggingFace because it runs for free on your computer.
+
+-----------------------------------------------------------------
+
+Imports FAISS (Facebook AI Similarity Search).
+
+Why: 
+    This is our "Database." It stores the number-versions of your PDF text and lets us quickly find which paragraph is most similar to your question.
+
+-----------------------------------------------------------------
+
+Imports core building blocks for LangChain.
+
+Why:
+
+PromptTemplate: Helps us write a standard instruction for the AI (e.g., "Answer based on this context...").
+
+RunnableLambda: A wrapper that turns a simple function into a chainable link in LangChain.
+
+Document: A simple container to hold text and metadata together.
+
+
+-----------------------------------------------------------------
+configuration:
+
+Reads the .env file on your computer.
+
+Why: It looks for GOOGLE_API_KEY=... in that file and loads it into the program's memory
+
+
+----------------------------------------------------------------
+
+A safety loop that deletes any internet proxy settings.
+
+Why: 
+      Sometimes (especially on school or work wifi), your computer tries to route traffic through a "Proxy." This often blocks the connection to Google. Deleting these settings forces a direct connection, fixing the UnsupportedProtocol error.
+
+----------------------------------------------------------------
+
+Logs into Google's servers.
+
+Why: 
+      It takes the password we loaded earlier and tells Google, "It's me, allow me to use the AI."
+
+-----------------------------------------------------------------
+-----------------------------------------------------------------
+-----------------------------------------------------------------
+Core Logic:
+
+A loop that opens every PDF you uploaded, goes through every page, copies the text, and glues it all into one giant string variable called text.
+
+Why: 
+     We need raw text to process it; we can't process the PDF file directly.
+
+-------------------------------------------------------------
+
+Cuts the giant text string into smaller pieces of 2,000 characters each.
+
+Why:
+
+chunk_size=2000: Keeps pieces small enough for the AI to read.
+
+chunk_overlap=300: Keeps the last 300 characters of the previous chunk in the next chunk. This ensures sentences aren't cut in half (context is preserved).
+
+
+---------------------------------------------------------------
+
+This specific block of code is the "Database Builder." It takes your raw text chunks, converts them into numbers (vectors), and saves them so the AI can search through them later.
+
+Here is the line-by-line explanation:
+
+1. def get_vector_store(text_chunks):
+What: Defines a function that accepts a list of text strings (text_chunks) as input.
+
+Why: We need a dedicated function to handle the heavy lifting of converting text to numbers and saving it.
+
+2. embeddings = HuggingFaceEmbeddings(...)
+What: Initializes the "Translator" model.
+
+model_name="sentence-transformers/all-MiniLM-L6-v2": This is the specific free model we are downloading. It is small, fast, and very good at understanding English sentences.
+
+model_kwargs={"device":"cpu"}: This tells the model to run on your CPU (processor) instead of a GPU (graphics card). This ensures it works on any standard laptop without crashing.
+
+Why: We need this model to translate human words into lists of numbers (vectors) that the computer can compare mathematically.
+
+3. documents = [Document(page_content=chunk) for chunk in text_chunks]
+What: A list comprehension that loops through every simple text string in text_chunks and wraps it inside a Document object.
+
+Why: The FAISS library cannot accept plain strings (like "hello"). It requires special Document objects that can hold extra data (metadata) if needed later.
+
+4. vector_store = FAISS.from_documents(documents, embedding=embeddings)
+What: This is the core magic step.
+
+It takes your list of documents.
+
+It uses the embeddings model to turn every document into numbers.
+
+It builds a searchable index (like a book index) optimized for speed.
+
+Why: This creates the actual "database" in memory. It allows us to ask, "Which chunk is most similar to 'salary'?" and get an answer in milliseconds.
+
+5. vector_store.save_local("faiss_index")
+What: Takes the database created in memory and writes it to your hard drive in a folder named faiss_index.
+
+Why: Persistence. Without this line, if you stopped the app, you would lose all your data and have to re-upload and re-process the PDFs every single time you restarted the code. This saves the work so it can be loaded later.
+
+
+------------------------------------------------------------------
+
+
+This function is the "Brain" of your chatbot. It sets up how the AI should answer questions and which AI model it should use.
+
+Here is the explanation for every part of this code block:
+
+1. def get_conversational_chain():
+What: Defines a function to create the logic chain.
+
+Why: We wrap this in a function so we can call it whenever we need the AI to answer a question, keeping the code organized.
+
+2. prompt_template = PromptTemplate(...)
+What: Creates a strict "Instruction Manual" for the AI.
+
+Why: You cannot just send raw text to an AI and hope for the best. You need to give it rules. This template forces the AI to follow a specific format.
+
+3. Inside the template=""" ... """
+Answer the question as detailed as possible...:
+
+Why: Instructions on how to behave (be detailed).
+
+If the answer is not in the provided context, say...:
+
+Why: This is the Anti-Hallucination Rule. It prevents the AI from making up fake facts. If the PDF doesn't have the answer, the AI is forced to admit it.
+
+Context: {context}:
+
+Why: This {context} is a placeholder. Later, the code will fill this space with the actual text paragraphs found in your PDF.
+
+Question: {question}:
+
+Why: This {question} is a placeholder where the user's actual question (e.g., "What is the salary?") will be inserted.
+
+4. input_variables=["context", "question"]
+What: Tells the program, "Hey, expect two pieces of data to fill in the blanks above."
+
+Why: Without this, the library wouldn't know which parts of the text template are variables and which parts are just instructions.
+
+5. model = ChatGoogleGenerativeAI(...)
+What: Initializes the specific Google AI model you want to use.
+
+Why: This creates the connection object that actually talks to Google's servers.
+
+6. model="models/gemini-2.5-flash"
+What: Selects the specific "Brain" version.
+
+Why: You are choosing gemini-2.5-flash.
+
+Note: As we discussed earlier, if this model version gives you errors (like 404 or 429), you should change this line to models/gemini-1.5-flash.
+
+7. temperature=0.3
+What: Controls the "Creativity vs. Accuracy" setting.
+
+0.0 = Robot-like, very factual, deterministic.
+
+1.0 = Creative, random, might make things up.
+
+Why: We use 0.3 (low temperature) because for a PDF chatbot, you want facts, not poetry. You want the answer to stay close to the document text.
+
+
+------------------------------------------------------------------
+
+This block is the "Execution Engine." It takes the raw ingredients (documents + question), cooks them into a single prompt, and serves the final answer.
+
+1. def rag_logic(inputs):
+What: Defines a small internal function.
+
+Why: inputs is a dictionary containing the search results (docs) and the user's question. We need a function to process these two separate things into one final text for the AI.
+
+2. context = "\n\n".join(doc.page_content for doc in inputs["docs"])
+What:
+
+inputs["docs"]: This is the list of the top 3 paragraphs found in your PDF.
+
+doc.page_content: Extracts just the text part of those paragraphs (ignoring page numbers or metadata).
+
+"\n\n".join(...): Takes those 3 separate text paragraphs and glues them together into one long string, separated by double newlines.
+
+Why: The AI model (Gemini) cannot read a "list" of objects directly. It only understands a single block of text. This line converts the "list of paragraphs" into "one long context string."
+
+3. final_prompt = prompt_template.format(...)
+What: Fills in the blanks of the template we created earlier.
+
+Why:
+
+context=context: Puts the long string of PDF text into the {context} slot.
+
+question=inputs["question"]: Puts the user's question into the {question} slot.
+
+Result: final_prompt is now a complete, human-readable instruction like:
+
+"Answer the question using this context: [PDF Text...]. Question: What is the salary? Answer:"
+
+4. return model.invoke(final_prompt).content
+What:
+
+model.invoke(final_prompt): Sends that complete instruction to Google's servers.
+
+.content: Extracts just the text answer from Google's response (ignoring metadata like token usage or safety ratings).
+
+Why: This is the actual API call. The result returned here is the final string (e.g., "The salary is $50,000") that will be shown to the user.
+
+5. return RunnableLambda(rag_logic)
+What: Wraps our rag_logic function into a LangChain "Runnable."
+
+Why: LangChain likes everything to be a standardized object. By wrapping our simple python function in RunnableLambda, it becomes a "link" in a chain that is easy to execute and manage.
+
+
+------------------------------------------------------------------
+
+This function acts as the "Coordinator". It connects all the pieces together: it takes the user's question, finds the right info in the database, sends it to the AI, and returns the final answer.
+
+1. def get_response(user_question):
+What: Defines a function that takes one input: user_question (the text the user typed).
+
+Why: We separate this logic from the UI code so the main app stays clean. It allows us to just call get_response("Hello") and get an answer back without worrying about the complex steps inside.
+
+2. embeddings = HuggingFaceEmbeddings(...)
+What: Reloads the exact same "Translator" model (MiniLM-L6-v2) that we used to build the database.
+
+Why: Consistency. To open and read the database, we need the exact same tool that built it. We also need it to convert the user's new question into numbers so it matches the format of the saved PDF chunks.
+
+3. try: ... except Exception as e:
+What: A safety wrapper (Error Handling).
+
+Why: If the user forgets to upload a PDF first, the "database" file won't exist. Without this block, the program would crash and show a scary error. This block catches the crash and lets us show a friendly "Please upload a PDF" message instead.
+
+4. new_db = FAISS.load_local("faiss_index", ...)
+What: Reads the faiss_index folder from your hard drive and loads the database back into the computer's active memory.
+
+allow_dangerous_deserialization=True:
+
+Why: Loading saved data files (pickles) can theoretically be risky if the file came from a hacker. This line tells the computer, "I trust this file because I just created it myself on this machine."
+
+5. docs = new_db.similarity_search(user_question, k=3)
+What: The search operation.
+
+It takes the user_question.
+
+It scans the database.
+
+It picks the top 3 (k=3) paragraphs that are most mathematically similar to the question.
+
+Why: This filters the 100-page PDF down to just the 3 most relevant paragraphs needed to answer the specific question.
+
+6. chain = get_conversational_chain()
+What: Calls the previous function to set up the "AI Brain" (the prompts and the connection to Google Gemini).
+
+Why: We need the logic engine ready to process the data we just found.
+
+7. response = chain.invoke({"docs": docs, "question": user_question})
+What: This is the Action Button.
+
+It packages the found paragraphs (docs) and the question into a bundle.
+
+It sends them into the chain (which sends them to Google).
+
+It waits for Google to reply.
+
+Why: This triggers the entire RAG (Retrieval-Augmented Generation) process to generate the final human-readable answer.
+
+8. return response
+What: Sends the final text answer back to the main app.
+
+Why: So the UI can verify it was successful and display it inside the chat bubble.
+
+
+------------------------------------------------------------------
+------------------------------------------------------------------------------------------------------------------------------------
+
+Main App UI
+
+This is the Main Entry Point of your application. It controls the layout, the sidebar, and what happens when you click buttons.
+
+Here is the line-by-line explanation:
+
+1. def main():
+What: Defines the main function where the app starts running.
+
+Why: In Python, it is good practice to put the "starting code" inside a function so it doesn't run accidentally if you import this file elsewhere.
+
+2. st.set_page_config(page_title="Gemini PDF Chat", page_icon="🤖")
+What: Configures the browser tab settings.
+
+Why:
+
+page_title: Changes the name on the browser tab (e.g., "Gemini PDF Chat").
+
+page_icon: Adds the little robot emoji (🤖) next to the title in the browser tab.
+
+3. with st.sidebar:
+What: Creates a "container" for the left-hand menu.
+
+Why: Everything indented under this line will appear in the collapsible side menu instead of the main center page. This keeps the main chat area clean.
+
+4. st.title("📂 Document Hub") & st.write(...)
+What: Adds a big bold header and some small instruction text inside the sidebar.
+
+Why: To guide the user on what to do (i.e., "Upload here").
+
+5. pdf_docs = st.file_uploader(...)
+What: Creates the drag-and-drop box for files.
+
+accept_multiple_files=True: Allows users to upload 1, 2, or 10 PDFs at once.
+
+type=["pdf"]: Restricts the box so users can only pick PDF files (prevents them from uploading images or Word docs by mistake).
+
+Result: The variable pdf_docs becomes a list containing all the uploaded files.
+
+6. if st.button("Submit & Process", type="primary"):
+What: Creates a clickable button.
+
+type="primary": Makes the button red/filled (the "main action" color) instead of the default grey.
+
+Logic: The code inside this if block only runs when the user clicks this button.
+
+7. if pdf_docs:
+What: Checks if the user actually uploaded files.
+
+Why: Prevents the app from crashing if someone clicks "Submit" without uploading anything.
+
+8. with st.spinner("Indexing documents..."):
+What: Shows a spinning circle animation while the code below it runs.
+
+Why: Processing PDFs takes time (3-10 seconds). Without this, the user might think the app froze.
+
+9. The Processing Steps (Inside the spinner)
+raw_text = get_pdf_text(pdf_docs): Extracts all text from the PDFs.
+
+text_chunks = get_text_chunks(raw_text): Cuts that text into small slices.
+
+get_vector_store(text_chunks): Converts slices to numbers and saves them to the "Database" folder.
+
+st.success("Done! ..."): Shows a green "Success" box once the hard work is finished.
+
+10. else: st.warning(...)
+What: This runs if pdf_docs was empty (step 7 failed).
+
+Why: Shows a yellow warning box telling the user, "Hey, you forgot to attach a file!"
+
+------------------------------------------------------------------
+
+
+This block creates the Chat Interface and handles the Memory of the conversation.
+
+In Streamlit, every time you click a button or type text, the entire app restarts from the top. Without this specific code, your previous messages would disappear every time you asked a new question.
+
+1. st.header("Chat with PDF using Gemini 🤖")
+What: Displays the large title text at the top of the main page.
+
+Why: Tells the user they are in the chat section.
+
+2. if "messages" not in st.session_state:
+What: Checks if our "Memory Box" exists yet.
+
+st.session_state is a special dictionary that survives the app restarting.
+
+Why: When you first open the app, there is no history. We need to check if this is the very first time running the code.
+
+3. st.session_state.messages = []
+What: If the memory box doesn't exist, create an empty list.
+
+Why: This initializes the chat history as empty so we can start adding messages to it later.
+
+4. for message in st.session_state.messages:
+What: A loop that goes through every single message saved in our memory list.
+
+Why: The Re-Draw Logic.
+
+Since Streamlit wipes the screen every time you hit "Enter," we must re-print every old message back onto the screen before showing the new one.
+
+Without this loop, you would only ever see the current question, and the previous ones would vanish.
+
+5. with st.chat_message(message["role"]):
+What: Creates a visual chat bubble.
+
+message["role"]: This will be either "user" (you) or "assistant" (Gemini).
+
+Streamlit automatically picks the right icon (a person or a robot) based on this role.
+
+Why: This formats the text so it looks like a WhatsApp or ChatGPT conversation instead of just plain text lines.
+
+6. st.markdown(message["content"])
+What: Writes the actual text inside the bubble.
+
+Why: Displays the saved question or answer.
+
+
+------------------------------------------------------------------
+
+
+This block handles the Interactive Chat Loop. It waits for you to type, updates the screen, talks to the AI, and saves everything so the conversation flows naturally.
+
+1. if prompt := st.chat_input("Ask a question about your PDF..."):
+What: This does two things at once (using the := "walrus operator"):
+
+It creates the chat input box at the bottom of the screen.
+
+It assigns whatever you type to the variable prompt.
+
+Why: The code inside this if block only runs when you hit Enter. Until then, the app sits and waits.
+
+2. st.session_state.messages.append({"role": "user", "content": prompt})
+What: Saves your new question into the "Memory List" immediately.
+
+Why: Crucial Step. If we don't save it before the app updates, your question might disappear if the app refreshes or runs a complex calculation.
+
+3. with st.chat_message("user"): st.markdown(prompt)
+What: Draws a "User" bubble (👤) containing the text you just typed.
+
+Why: Gives you instant visual feedback so you know your message was sent.
+
+4. with st.chat_message("assistant"):
+What: Opens an empty "AI" bubble (🤖) on the screen.
+
+Why: We are reserving a spot on the screen where the answer will appear, even though we don't have the answer yet.
+
+5. with st.spinner("Thinking..."):
+What: Shows a small spinning animation inside the empty AI bubble.
+
+Why: User Experience. Searching the PDF and generating an answer takes 2-5 seconds. The spinner tells the user, "I haven't crashed, I'm just working."
+
+6. response = get_response(prompt)
+What: This calls the "Coordinator" function we explained earlier.
+
+It searches the database.
+
+It asks Google Gemini.
+
+It returns the final text answer.
+
+Why: This is the heavy lifting. The app pauses here until the answer is ready.
+
+Visualizing the Process:
+
+This line triggers the entire RAG pipeline shown in diagrams: Retrieval (finding text) + Generation (Gemini writing the answer).
+
+7. st.markdown(response)
+What: Writes the final answer into the AI bubble.
+
+Why: The user finally sees the result.
+
+8. st.session_state.messages.append({"role": "assistant", "content": response})
+What: Saves the AI's answer into the "Memory List."
+
+Why: Persistence. If you ask a second question later, the app needs to redraw this answer first. If we don't save it now, this answer will vanish forever as soon as you type again.
+
+
+
