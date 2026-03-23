@@ -1,5 +1,8 @@
 # 🤖 Gemini PDF Chatbot (RAG)
 
+🚀 Live Demo: https://pdf-rag-chatbot-nzxseh9i4dec2jwtwlh9aj.streamlit.app/
+
+
 A powerful Python application that allows you to chat with multiple PDF documents using Google's **Gemini AI** and **LangChain**. 
 
 This project uses **RAG (Retrieval-Augmented Generation)** to index your PDF content, allowing the AI to answer specific questions based *only* on the documents you provide. It features a persistent chat history and a modern, user-friendly interface.
@@ -23,7 +26,18 @@ This project uses **RAG (Retrieval-Augmented Generation)** to index your PDF con
 * **LLM:** Google Gemini 1.5 Flash (via `google-generativeai`)
 * **Framework:** [LangChain](https://www.langchain.com/) (for chaining logic)
 * **Embeddings:** HuggingFace `sentence-transformers` (Local & Free)
-* **Vector Database:** FAISS (Facebook AI Similarity Search)
+* **Vector Database:** FAISS (Facebook AI Similarity Search
+
+---
+
+
+🌐 Deployment
+
+This application is deployed using Streamlit Cloud.
+
+👉 Access it here:
+https://pdf-rag-chatbot-nzxseh9i4dec2jwtwlh9aj.streamlit.app/
+
 
 ---
 
